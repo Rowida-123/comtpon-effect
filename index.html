@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compton Effect — Quantum Scattering Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#04080f; --bg2:#080e1a; --bg3:#0d1526;
+  --surface:#111b2e; --surface2:#172035;
+  --border:rgba(100,180,255,0.12); --border2:rgba(100,180,255,0.22);
+  --accent:#00d4ff; --accent2:#ff6b35; --accent3:#39ff8a; --gold:#ffd166;
+  --text:#e8f4ff; --text2:#7a9dbf; --text3:#3a5870;
+  --mono:'Space Mono',monospace; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--display);overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(0,60,120,0.35) 0%,transparent 70%);pointer-events:none;}
+.page{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 60px;}
+
+header{padding:36px 0 28px;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;}
+.logo-block{display:flex;align-items:center;gap:14px;}
+.logo-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,212,255,0.04));border:1px solid rgba(0,212,255,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.logo-text h1{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.logo-text p{font-size:12px;color:var(--text2);font-family:var(--mono);margin-top:2px;}
+.badge{font-family:var(--mono);font-size:10px;padding:4px 10px;border:1px solid rgba(0,212,255,0.25);border-radius:4px;color:var(--accent);background:rgba(0,212,255,0.06);}
+
+.main-grid{display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto auto;gap:16px;margin-top:24px;}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+.canvas-panel{grid-row:1/3;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;position:relative;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);}
+.panel-title{font-size:11px;font-family:var(--mono);color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--accent3);box-shadow:0 0 8px var(--accent3);animation:pulse-dot 2s infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+#simCanvas{display:block;width:100%;height:450px;}
+
+/* proof banner */
+#proof-banner{display:none;position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:20;text-align:center;pointer-events:none;}
+@keyframes banner-in{from{opacity:0;transform:translate(-50%,-50%) scale(0.55)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes banner-out{from{opacity:1}to{opacity:0;transform:translate(-50%,-50%) scale(0.9)}}
+.proof-inner{background:rgba(4,8,15,0.94);border:2px solid var(--gold);border-radius:18px;padding:20px 32px;box-shadow:0 0 70px rgba(255,209,102,0.4),0 0 140px rgba(255,209,102,0.12);}
+.proof-tag{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px;}
+.proof-title{font-family:var(--display);font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.3px;line-height:1.2;margin-bottom:6px;}
+.proof-title span{color:var(--gold);}
+.proof-sub{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.proof-wave-row{display:flex;gap:18px;justify-content:center;margin-top:12px;}
+.pw-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 14px;text-align:center;}
+.pw-label{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.pw-val{font-family:var(--mono);font-size:15px;font-weight:700;}
+
+/* wavelength panel */
+.wv-panel{background:var(--bg3);border-top:1px solid var(--border);padding:14px 18px 10px;}
+.wv-title{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;}
+#wvCanvas{display:block;width:100%;height:120px;}
+
+/* legend */
+.vel-legend{display:flex;gap:18px;padding:10px 18px;border-top:1px solid var(--border);background:rgba(0,0,0,0.15);flex-wrap:wrap;}
+.vel-item{display:flex;align-items:center;gap:7px;}
+.vel-line{width:24px;height:3px;border-radius:2px;}
+.vel-label{font-size:10px;font-family:var(--mono);color:var(--text2);}
+
+/* side panels */
+.controls-panel,.data-panel{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.p-section{padding:16px 18px;border-bottom:1px solid var(--border);}
+.p-section:last-child{border-bottom:none;}
+.sec-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:14px;}
+.ctrl{margin-bottom:14px;} .ctrl:last-child{margin-bottom:0;}
+.ctrl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.ctrl-name{font-size:13px;color:var(--text2);}
+.ctrl-val{font-family:var(--mono);font-size:13px;color:var(--accent);}
+.ctrl-val.orange{color:var(--accent2);}
+input[type=range]{width:100%;height:4px;cursor:pointer;-webkit-appearance:none;appearance:none;background:var(--surface2);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 10px rgba(0,212,255,0.5);}
+input[type=range].orange::-webkit-slider-thumb{background:var(--accent2);box-shadow:0 0 10px rgba(255,107,53,0.5);}
+.slider-track{position:relative;}
+.slider-fill{position:absolute;top:50%;transform:translateY(-50%);height:4px;border-radius:2px;pointer-events:none;left:0;background:linear-gradient(90deg,var(--accent),rgba(0,212,255,0.4));}
+.slider-fill.orange{background:linear-gradient(90deg,var(--accent2),rgba(255,107,53,0.4));}
+.pills{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .2s;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent);box-shadow:0 0 20px rgba(0,212,255,0.25);}
+.fire-btn{width:100%;padding:13px;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,212,255,0.05));border:1px solid rgba(0,212,255,0.35);border-radius:10px;color:var(--accent);font-family:var(--mono);font-size:13px;cursor:pointer;letter-spacing:0.08em;transition:all .2s;position:relative;overflow:hidden;}
+.fire-btn::before{content:'';position:absolute;inset:0;background:rgba(0,212,255,0.08);transform:scaleX(0);transform-origin:left;transition:transform .3s;}
+.fire-btn:hover::before{transform:scaleX(1);}
+.fire-btn:hover{box-shadow:0 0 20px rgba(0,212,255,0.3);}
+.fire-btn:active{transform:scale(0.98);}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.m-lbl{font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em;}
+.m-val{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.m-val.blue{color:var(--accent);} .m-val.orange{color:var(--accent2);} .m-val.green{color:var(--accent3);} .m-val.gold{color:var(--gold);}
+.m-unit{font-size:10px;color:var(--text3);font-family:var(--mono);}
+.shift-bars{display:flex;flex-direction:column;gap:8px;}
+.sbar-row{display:flex;align-items:center;gap:10px;}
+.sbar-lbl{font-family:var(--mono);font-size:11px;color:var(--text2);min-width:22px;}
+.sbar-wrap{flex:1;height:14px;background:var(--surface);border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.sbar-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.sbar-num{font-family:var(--mono);font-size:10px;color:var(--text2);min-width:60px;text-align:right;}
+.delta-row{margin-top:10px;padding:10px 14px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;}
+.d-lbl{font-size:12px;font-family:var(--mono);color:var(--gold);}
+.d-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--gold);}
+.formula-strip{padding:14px 18px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--mono);font-size:13px;color:var(--accent2);text-align:center;letter-spacing:0.04em;}
+.formula-strip span{color:var(--text2);font-size:11px;display:block;margin-top:4px;}
+
+/* evidence */
+.evidence-panel{grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:0;}
+.ev-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0;}
+.ev-col{padding:20px 22px;border-right:1px solid var(--border);}
+.ev-col:last-child{border-right:none;}
+.ev-badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;margin-bottom:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;}
+.ev-col h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.ev-col p{font-size:11px;color:var(--text2);line-height:1.65;font-family:var(--mono);}
+
+footer{margin-top:40px;padding:20px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11px;color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="logo-block">
+    <div class="logo-icon">⚛</div>
+    <div class="logo-text">
+      <h1>Compton Effect Lab</h1>
+      <p>Quantum Photon–Electron Scattering Simulator</p>
+    </div>
+  </div>
+  <div class="badge">v3.0 · Physics Engine</div>
+</header>
+
+<div class="main-grid">
+
+  <div class="canvas-panel" id="canvasPanel">
+    <div class="panel-header">
+      <span class="panel-title">Scattering Stage — Real-time Simulation</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-dot"></div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">LIVE</span>
+      </div>
+    </div>
+
+    <div id="proof-banner">
+      <div class="proof-inner">
+        <div class="proof-tag">⚡ Experimental Proof · Compton 1923</div>
+        <div class="proof-title">Photon behaves as a<br><span>PARTICLE OF MATTER</span></div>
+        <div class="proof-sub">Momentum transferred like a billiard-ball collision</div>
+        <div class="proof-wave-row">
+          <div class="pw-box">
+            <div class="pw-label" style="color:var(--accent)">λ₀ before</div>
+            <div class="pw-val" style="color:var(--accent)" id="banner-l0">—</div>
+          </div>
+          <div class="pw-box" style="padding:7px 10px;align-self:center;">
+            <div style="font-size:18px;color:var(--gold)">→</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--gold);margin-top:2px">Δλ shift</div>
+          </div>
+          <div class="pw-box">
+            <div class="pw-label" style="color:var(--accent2)">λ' after</div>
+            <div class="pw-val" style="color:var(--accent2)" id="banner-l1">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="simCanvas"></canvas>
+
+    <div class="wv-panel">
+      <div class="wv-title">Photon Wavelength — Before &amp; After Collision (same spatial scale)</div>
+      <canvas id="wvCanvas"></canvas>
+    </div>
+
+    <div class="vel-legend">
+      <div class="vel-item"><div class="vel-line" style="background:var(--accent);box-shadow:0 0 6px var(--accent)"></div><span class="vel-label">γ₀ incident photon</span></div>
+      <div class="vel-item"><div class="vel-line" style="background:var(--accent2);box-shadow:0 0 6px var(--accent2)"></div><span class="vel-label">γ' scattered photon</span></div>
+      <div class="vel-item"><div class="vel-line" style="background:var(--accent3);box-shadow:0 0 6px var(--accent3)"></div><span class="vel-label">e⁻ recoil electron</span></div>
+      <div class="vel-item"><div class="vel-line" style="background:var(--gold);height:0;border-top:2px dashed var(--gold);border-radius:0;width:22px"></div><span class="vel-label">velocity vector</span></div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls-panel">
+    <div class="panel-header"><span class="panel-title">Experiment Controls</span></div>
+    <div class="p-section">
+      <div class="sec-label">Scattering Angle θ</div>
+      <div class="ctrl">
+        <div class="ctrl-top"><span class="ctrl-name">Deflection angle</span><span class="ctrl-val" id="lbl-angle">90°</span></div>
+        <div class="slider-track">
+          <div class="slider-fill" id="fill-angle" style="width:50%"></div>
+          <input type="range" min="0" max="180" value="90" step="1" id="sl-angle">
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">0° forward</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">180° backscatter</span>
+        </div>
+      </div>
+    </div>
+    <div class="p-section">
+      <div class="sec-label">Incident Photon Energy</div>
+      <div class="ctrl">
+        <div class="ctrl-top"><span class="ctrl-name">E₀ — photon energy</span><span class="ctrl-val orange" id="lbl-energy">100 keV</span></div>
+        <div class="slider-track">
+          <div class="slider-fill orange" id="fill-energy" style="width:9.1%"></div>
+          <input type="range" class="orange" min="10" max="1000" value="100" step="1" id="sl-energy">
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">10 keV soft X-ray</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">1 MeV γ-ray</span>
+        </div>
+      </div>
+    </div>
+    <div class="p-section">
+      <div class="sec-label">Target Particle</div>
+      <div class="pills" id="target-pills">
+        <button class="pill active" data-mass="0.511">e⁻ free</button>
+        <button class="pill" data-mass="938.3">p⁺ proton</button>
+        <button class="pill" data-mass="105.7">μ⁻ muon</button>
+        <button class="pill" data-mass="0.511">e⁺ positron</button>
+      </div>
+    </div>
+    <div class="p-section">
+      <button class="fire-btn" id="fire-btn">▶ FIRE PHOTON</button>
+    </div>
+    <div class="formula-strip">
+      Δλ = (h/m₀c)(1 − cos θ)
+      <span>Compton Scattering Formula · 1923</span>
+    </div>
+  </div>
+
+  <!-- DATA -->
+  <div class="data-panel">
+    <div class="panel-header"><span class="panel-title">Energy &amp; Wavelength Data</span></div>
+    <div class="p-section">
+      <div class="sec-label">Energy Values</div>
+      <div class="metrics">
+        <div class="metric"><div class="m-lbl">E₀ incident</div><div class="m-val blue" id="mv-e0">100.00</div><div class="m-unit">keV</div></div>
+        <div class="metric"><div class="m-lbl">E' scattered</div><div class="m-val orange" id="mv-e1">—</div><div class="m-unit">keV</div></div>
+        <div class="metric"><div class="m-lbl">KE electron</div><div class="m-val green" id="mv-ke">—</div><div class="m-unit">keV</div></div>
+        <div class="metric"><div class="m-lbl">Compton Δλ</div><div class="m-val gold" id="mv-dl">—</div><div class="m-unit">pm</div></div>
+      </div>
+    </div>
+    <div class="p-section">
+      <div class="sec-label">Wavelength Comparison</div>
+      <div class="shift-bars">
+        <div class="sbar-row"><span class="sbar-lbl">λ₀</span><div class="sbar-wrap"><div class="sbar-fill" id="bar-l0" style="background:var(--accent);width:0%"></div></div><span class="sbar-num" id="num-l0">—</span></div>
+        <div class="sbar-row"><span class="sbar-lbl">λ'</span><div class="sbar-wrap"><div class="sbar-fill" id="bar-l1" style="background:var(--accent2);width:0%"></div></div><span class="sbar-num" id="num-l1">—</span></div>
+      </div>
+      <div class="delta-row">
+        <span class="d-lbl">Energy transferred</span>
+        <span class="d-val" id="mv-pct">—</span>
+      </div>
+    </div>
+    <div class="p-section">
+      <div class="sec-label">Photon Speed</div>
+      <div class="metrics">
+        <div class="metric"><div class="m-lbl">Before (γ₀)</div><div class="m-val blue" style="font-size:14px">c</div><div class="m-unit">= 3×10⁸ m/s</div></div>
+        <div class="metric"><div class="m-lbl">After (γ')</div><div class="m-val orange" style="font-size:14px">c</div><div class="m-unit">= 3×10⁸ m/s</div></div>
+      </div>
+      <div style="margin-top:8px;padding:8px 10px;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.15);border-radius:8px;">
+        <p style="font-family:var(--mono);font-size:10px;color:var(--text2);line-height:1.6;">
+          Speed = <span style="color:var(--accent2)">c</span> unchanged. But <span style="color:var(--accent)">frequency ↓</span> and <span style="color:var(--accent2)">λ increases</span>. Momentum p = h/λ decreases — transferred to e⁻.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EVIDENCE -->
+<div class="evidence-panel" style="margin-top:16px;">
+  <div class="panel-header">
+    <span class="panel-title">Evidence: Photon is a Particle</span>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">5 key proofs · Compton (1923)</span>
+  </div>
+  <div class="ev-cols">
+    <div class="ev-col"><div class="ev-badge">01 · momentum</div><h3>Definite Momentum Transfer</h3><p>The recoiling electron carries a precise, calculable momentum — exactly as in a billiard-ball collision. Waves cannot deliver a fixed quantum of momentum to a single particle.</p></div>
+    <div class="ev-col"><div class="ev-badge">02 · conservation</div><h3>Exact Conservation Laws</h3><p>Δλ = (h/m₀c)(1−cosθ) is derived purely from conservation of energy and momentum treating the photon as a particle. Matches experiment to 5 significant figures.</p></div>
+    <div class="ev-col"><div class="ev-badge">03 · discrete peaks</div><h3>Two Sharp Spectral Lines</h3><p>Both the original λ₀ and shifted λ' appear as sharp lines — not a continuous smear. Only particle-like one-to-one collisions produce sharp discrete peaks.</p></div>
+    <div class="ev-col"><div class="ev-badge">04 · angle shift</div><h3>Angle-Dependent Shift</h3><p>Δλ depends only on θ, not incident wavelength. Classical Thomson scattering predicts zero change at all angles — completely contradicted by experiment.</p></div>
+    <div class="ev-col"><div class="ev-badge">05 · mass scaling</div><h3>Mass-Dependent Shift</h3><p>Switch to proton target — the shift nearly vanishes because λ_c = h/mc scales with mass. Confirms the photon collides with a single definite particle.</p></div>
+  </div>
+</div>
+
+<footer>
+  <span>Compton Effect · A.H. Compton, 1923 · Nobel Prize Physics 1927</span>
+  <span>E = hf · p = h/λ · Δλ = λ_c(1 − cos θ)</span>
+</footer>
+</div>
+
+<script>
+// ══ PHYSICS ══
+const H_KEV_PM=1239.8, H_PM=2.42631;
+let angle=90, energy0=100, targetMass=0.511;
+
+function compute(){
+  const th=angle*Math.PI/180;
+  const lam0=H_KEV_PM/energy0;
+  const lamC=H_PM*(0.511/targetMass);
+  const dLam=lamC*(1-Math.cos(th));
+  const lam1=lam0+dLam;
+  const e1=H_KEV_PM/lam1;
+  const ke=energy0-e1;
+  const pct=(ke/energy0)*100;
+  const phi=Math.atan2(-e1*Math.sin(-th), energy0-e1*Math.cos(-th));
+  return{lam0,lam1,dLam,e1,ke,pct,phi,p0:energy0/H_KEV_PM,p1:e1/H_KEV_PM};
+}
+
+function updateMetrics(){
+  const{lam0,lam1,dLam,e1,ke,pct}=compute();
+  document.getElementById('mv-e0').textContent=energy0.toFixed(2);
+  document.getElementById('mv-e1').textContent=e1.toFixed(2);
+  document.getElementById('mv-ke').textContent=ke.toFixed(2);
+  document.getElementById('mv-dl').textContent=dLam.toFixed(3);
+  document.getElementById('mv-pct').textContent=pct.toFixed(1)+'%';
+  document.getElementById('num-l0').textContent=lam0.toFixed(2)+' pm';
+  document.getElementById('num-l1').textContent=lam1.toFixed(2)+' pm';
+  const maxL=Math.max(lam0,lam1,1);
+  document.getElementById('bar-l0').style.width=(lam0/maxL*100).toFixed(1)+'%';
+  document.getElementById('bar-l1').style.width=(lam1/maxL*100).toFixed(1)+'%';
+}
+
+// ══ MAIN CANVAS ══
+const canvas=document.getElementById('simCanvas');
+const ctx=canvas.getContext('2d');
+let W=0,H=0;
+function resizeMain(){
+  const dpr=window.devicePixelRatio||1, r=canvas.getBoundingClientRect();
+  W=r.width; H=r.height;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+// ══ WAVEFORM CANVAS ══
+const wvC=document.getElementById('wvCanvas');
+const wvX=wvC.getContext('2d');
+let WW=0,WH=0;
+function resizeWv(){
+  const dpr=window.devicePixelRatio||1, r=wvC.getBoundingClientRect();
+  WW=r.width; WH=r.height;
+  wvC.width=WW*dpr; wvC.height=WH*dpr;
+  wvX.setTransform(dpr,0,0,dpr,0,0);
+}
+
+let wvPhase=0, wvId=null;
+function drawWaveform(ph){
+  if(!WW||!WH) return;
+  ph=ph||0;
+  const{lam0,lam1,dLam}=compute();
+  wvX.clearRect(0,0,WW,WH);
+  const midY=WH*0.42, amp=WH*0.28;
+  const halfW=WW*0.46, gap=WW*0.08;
+  // spatial scale: fit 4 cycles of lam0 in halfW
+  const scale=halfW/(lam0*4);
+
+  // ── BEFORE ──
+  wvX.save();
+  wvX.fillStyle='rgba(0,212,255,0.75)';
+  wvX.font='bold 11px "Space Mono",monospace';
+  wvX.fillText('BEFORE  λ₀ = '+lam0.toFixed(2)+' pm', 6, 13);
+  wvX.restore();
+
+  wvX.save();
+  wvX.strokeStyle='#00d4ff'; wvX.lineWidth=2.2;
+  wvX.shadowColor='#00d4ff'; wvX.shadowBlur=9;
+  wvX.beginPath();
+  for(let x=0;x<=halfW;x++){
+    const y=midY+amp*Math.sin((x/(lam0*scale))*Math.PI*2+ph);
+    x===0?wvX.moveTo(x,y):wvX.lineTo(x,y);
+  }
+  wvX.stroke(); wvX.restore();
+
+  // period bracket λ0
+  const p0px=lam0*scale;
+  if(p0px>16){
+    const by=midY+amp+12;
+    wvX.save(); wvX.strokeStyle='rgba(0,212,255,0.35)'; wvX.lineWidth=1; wvX.setLineDash([3,3]);
+    wvX.beginPath();
+    wvX.moveTo(4,by); wvX.lineTo(4+p0px,by);
+    wvX.moveTo(4,by-5); wvX.lineTo(4,by+5);
+    wvX.moveTo(4+p0px,by-5); wvX.lineTo(4+p0px,by+5);
+    wvX.stroke(); wvX.setLineDash([]);
+    wvX.fillStyle='rgba(0,212,255,0.55)'; wvX.font='9px "Space Mono",monospace';
+    wvX.textAlign='center';
+    wvX.fillText('λ₀',4+p0px/2,by+14);
+    wvX.restore();
+  }
+
+  // ── DIVIDER ──
+  const divX=halfW+gap/2;
+  wvX.save();
+  wvX.strokeStyle='rgba(100,180,255,0.18)'; wvX.lineWidth=1;
+  wvX.beginPath(); wvX.moveTo(divX,0); wvX.lineTo(divX,WH); wvX.stroke();
+  wvX.fillStyle='rgba(255,209,102,0.8)'; wvX.font='bold 10px "Space Mono",monospace';
+  wvX.textAlign='center';
+  wvX.fillText('Δλ',divX,WH*0.35);
+  wvX.fillStyle='rgba(255,209,102,0.55)'; wvX.font='9px "Space Mono",monospace';
+  wvX.fillText('+'+dLam.toFixed(2)+'pm',divX,WH*0.5);
+  wvX.restore();
+
+  // ── AFTER ──
+  const offX=halfW+gap;
+  wvX.save();
+  wvX.fillStyle='rgba(255,107,53,0.75)';
+  wvX.font='bold 11px "Space Mono",monospace'; wvX.textAlign='left';
+  wvX.fillText("AFTER   λ' = "+lam1.toFixed(2)+' pm',offX+4,13);
+  wvX.restore();
+
+  wvX.save();
+  wvX.strokeStyle='#ff6b35'; wvX.lineWidth=2.2;
+  wvX.shadowColor='#ff6b35'; wvX.shadowBlur=9;
+  wvX.beginPath();
+  for(let x=0;x<=halfW;x++){
+    const phaseShift=ph*(lam0/lam1);
+    const y=midY+amp*Math.sin((x/(lam1*scale))*Math.PI*2+phaseShift);
+    x===0?wvX.moveTo(offX+x,y):wvX.lineTo(offX+x,y);
+  }
+  wvX.stroke(); wvX.restore();
+
+  // period bracket λ1
+  const p1px=lam1*scale;
+  if(p1px>16){
+    const by=midY+amp+12;
+    const bx1=Math.min(offX+4+p1px, WW-6);
+    wvX.save(); wvX.strokeStyle='rgba(255,107,53,0.35)'; wvX.lineWidth=1; wvX.setLineDash([3,3]);
+    wvX.beginPath();
+    wvX.moveTo(offX+4,by); wvX.lineTo(bx1,by);
+    wvX.moveTo(offX+4,by-5); wvX.lineTo(offX+4,by+5);
+    if(offX+4+p1px<WW-6){wvX.moveTo(bx1,by-5); wvX.lineTo(bx1,by+5);}
+    wvX.stroke(); wvX.setLineDash([]);
+    wvX.fillStyle='rgba(255,107,53,0.55)'; wvX.font='9px "Space Mono",monospace';
+    wvX.textAlign='center';
+    wvX.fillText("λ'",offX+4+(bx1-offX-4)/2,by+14);
+    wvX.restore();
+  }
+
+  // momentum footnotes
+  wvX.save(); wvX.font='9px "Space Mono",monospace'; wvX.textAlign='left';
+  wvX.fillStyle='rgba(0,212,255,0.4)'; wvX.fillText('p₀ = h/λ₀  (higher momentum)',6,WH-5);
+  wvX.fillStyle='rgba(255,107,53,0.4)'; wvX.fillText("p' = h/λ'  (lower momentum → given to e⁻)",offX+4,WH-5);
+  wvX.restore();
+}
+
+function animateWaveform(){
+  wvPhase+=0.045;
+  drawWaveform(wvPhase);
+  wvId=requestAnimationFrame(animateWaveform);
+}
+
+// ══ SPLASH PARTICLES ══
+let splashParts=[];
+function spawnSplash(cx,cy){
+  splashParts=[];
+  const cols=['#00d4ff','#ff6b35','#ffd166','#39ff8a','#ffffff','#ff44aa','#88ccff'];
+  for(let i=0;i<55;i++){
+    const a=Math.random()*Math.PI*2, sp=2+Math.random()*6;
+    splashParts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,
+      r:2+Math.random()*5,color:cols[i%cols.length],life:1,
+      decay:0.016+Math.random()*0.024,tail:[]});
+  }
+  // ring sparks
+  for(let i=0;i<24;i++){
+    const a=(i/24)*Math.PI*2, sp=3.5+Math.random()*3;
+    splashParts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,
+      r:1.5+Math.random()*2,color:'#ffd166',life:1,
+      decay:0.022+Math.random()*0.018,tail:[]});
+  }
+}
+function updateSplash(){
+  for(const p of splashParts){
+    p.tail.push({x:p.x,y:p.y});
+    if(p.tail.length>9)p.tail.shift();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.09; p.vx*=0.97; p.life-=p.decay;
+  }
+  splashParts=splashParts.filter(p=>p.life>0);
+}
+function drawSplash(){
+  for(const p of splashParts){
+    if(p.tail.length>1){
+      ctx.save();
+      for(let i=1;i<p.tail.length;i++){
+        const a=(i/p.tail.length)*p.life*0.55;
+        ctx.strokeStyle=p.color; ctx.globalAlpha=a; ctx.lineWidth=p.r*0.65;
+        ctx.beginPath(); ctx.moveTo(p.tail[i-1].x,p.tail[i-1].y);
+        ctx.lineTo(p.tail[i].x,p.tail[i].y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha=p.life; ctx.fillStyle=p.color;
+    ctx.shadowColor=p.color; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ══ DRAW HELPERS ══
+function drawGrid(){
+  ctx.save(); ctx.strokeStyle='rgba(0,212,255,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+}
+function drawElectron(x,y,r,alpha){
+  ctx.save(); ctx.globalAlpha=alpha;
+  const g=ctx.createRadialGradient(x,y,0,x,y,r*2.5);
+  g.addColorStop(0,'rgba(57,255,138,0.4)');g.addColorStop(0.5,'rgba(57,255,138,0.1)');g.addColorStop(1,'rgba(57,255,138,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r*2.5,0,Math.PI*2); ctx.fill();
+  ctx.shadowColor='#39ff8a'; ctx.shadowBlur=20; ctx.fillStyle='#39ff8a';
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0; ctx.fillStyle='rgba(255,255,255,0.4)';
+  ctx.beginPath(); ctx.arc(x-r*0.3,y-r*0.3,r*0.35,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawVelocityVector(x,y,vx,vy,color,label){
+  const len=Math.sqrt(vx*vx+vy*vy); if(len<2)return;
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=2;
+  ctx.shadowColor=color; ctx.shadowBlur=8; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+vx,y+vy); ctx.stroke(); ctx.setLineDash([]);
+  const ang=Math.atan2(vy,vx);
+  ctx.fillStyle=color; ctx.translate(x+vx,y+vy); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-9,-4); ctx.lineTo(-9,4); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  if(label){ctx.save();ctx.fillStyle=color;ctx.font='10px "Space Mono",monospace';ctx.globalAlpha=0.8;ctx.fillText(label,x+vx+10,y+vy+4);ctx.restore();}
+}
+function drawAngleArc(cx,cy,th){
+  if(angle<2||angle>178)return;
+  ctx.save(); ctx.strokeStyle='rgba(255,209,102,0.5)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(cx,cy,44,-th,0); ctx.stroke(); ctx.setLineDash([]);
+  const mid=-th/2, r=58;
+  ctx.fillStyle='#ffd166'; ctx.font='bold 13px "Space Mono",monospace'; ctx.textAlign='center';
+  ctx.fillText('θ='+angle+'°',cx+r*Math.cos(mid),cy+r*Math.sin(mid));
+  ctx.restore();
+}
+function drawPhotonBeam(x1,y1,x2,y2,color,t){
+  const len=Math.sqrt((x2-x1)**2+(y2-y1)**2); if(len<1)return;
+  const ang=Math.atan2(y2-y1,x2-x1);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=2.5;
+  ctx.shadowColor=color; ctx.shadowBlur=18;
+  ctx.setLineDash([12,6]); ctx.lineDashOffset=-(t*1.4)%18;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.shadowBlur=6; ctx.fillStyle=color;
+  ctx.translate(x2,y2); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-14,-6); ctx.lineTo(-14,6); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ══ IDLE ANIMATION ══
+let idleFrame=0, idleId=null;
+function startIdleAnim(){
+  if(idleId)cancelAnimationFrame(idleId);
+  function loop(){idleFrame++;drawIdle(idleFrame);idleId=requestAnimationFrame(loop);}
+  loop();
+}
+function drawIdle(f){
+  f=f||0; ctx.clearRect(0,0,W,H); drawGrid(); drawSplash();
+  const cx=W*0.48, cy=H*0.5, th=angle*Math.PI/180;
+  const{phi,lam0}=compute();
+  const outLen=Math.min(W*0.38,200);
+  // incident (animated)
+  ctx.save(); ctx.strokeStyle='rgba(0,212,255,0.4)'; ctx.lineWidth=2;
+  ctx.shadowColor='#00d4ff'; ctx.shadowBlur=12;
+  ctx.setLineDash([10,6]); ctx.lineDashOffset=-(f*1.2)%16;
+  ctx.beginPath(); ctx.moveTo(20,cy); ctx.lineTo(cx-16,cy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#00d4ff'; ctx.shadowBlur=10;
+  ctx.translate(cx-14,cy); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-12,-5); ctx.lineTo(-12,5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // outgoing dashed
+  ctx.save(); ctx.strokeStyle='rgba(255,107,53,0.22)'; ctx.lineWidth=1.5; ctx.setLineDash([6,6]);
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+outLen*Math.cos(-th),cy+outLen*Math.sin(-th)); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+  // electron dashed
+  ctx.save(); ctx.strokeStyle='rgba(57,255,138,0.18)'; ctx.lineWidth=1.5; ctx.setLineDash([4,8]);
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+90*Math.cos(phi),cy+90*Math.sin(phi)); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+  drawAngleArc(cx,cy,th);
+  drawElectron(cx,cy,10*(0.85+0.15*Math.sin(f*0.08)),1);
+  // λ₀ label on beam
+  ctx.save(); ctx.fillStyle='rgba(0,212,255,0.5)'; ctx.font='11px "Space Mono",monospace';
+  ctx.fillText('λ₀='+lam0.toFixed(1)+'pm',30,cy-16);
+  ctx.fillStyle='rgba(255,107,53,0.4)';
+  ctx.fillText("γ'",cx+50*Math.cos(-th)+12,cy+50*Math.sin(-th)-10);
+  ctx.restore();
+  ctx.save(); ctx.fillStyle='rgba(0,212,255,0.13)'; ctx.font='500 13px "Syne",sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Adjust controls → FIRE PHOTON to run simulation',W/2,H-22); ctx.restore();
+}
+
+// ══ BANNER ══
+const proofBanner=document.getElementById('proof-banner');
+function showBanner(){
+  const{lam0,lam1}=compute();
+  document.getElementById('banner-l0').textContent=lam0.toFixed(2)+' pm';
+  document.getElementById('banner-l1').textContent=lam1.toFixed(2)+' pm';
+  proofBanner.style.display='block';
+  proofBanner.style.animation='none'; void proofBanner.offsetWidth;
+  proofBanner.style.animation='banner-in 0.4s cubic-bezier(.17,.67,.35,1.3) forwards';
+  clearTimeout(proofBanner._t);
+  proofBanner._t=setTimeout(()=>{
+    proofBanner.style.animation='banner-out 0.4s ease forwards';
+    setTimeout(()=>{proofBanner.style.display='none';},400);
+  },3800);
+}
+
+// ══ SIMULATION ══
+let simState='idle', simFrame=0, simId=null;
+let photonX,photonY, scatPhotonX,scatPhotonY, scatVX,scatVY;
+let electronX,electronY, electronVX,electronVY;
+let collisionFrame=-1;
+const COL=0.48;
+
+function startSim(){
+  if(simId)cancelAnimationFrame(simId);
+  if(idleId)cancelAnimationFrame(idleId);
+  proofBanner.style.display='none';
+  simState='flying'; simFrame=0; collisionFrame=-1; splashParts=[];
+  const cx=W*COL, cy=H*0.5, th=angle*Math.PI/180;
+  const{phi,ke}=compute();
+  photonX=0; photonY=cy; electronX=cx; electronY=cy;
+  scatPhotonX=cx; scatPhotonY=cy;
+  scatVX=Math.cos(-th)*5.2; scatVY=Math.sin(-th)*5.2;
+  const eSpeed=Math.min(ke/energy0*190,170);
+  electronVX=Math.cos(phi)*eSpeed; electronVY=Math.sin(phi)*eSpeed;
+
+  function loop(){
+    ctx.clearRect(0,0,W,H); drawGrid(); simFrame++;
+    const cx=W*COL, cy=H*0.5, th=angle*Math.PI/180;
+    const{phi,ke,e1,lam0,lam1,p0,p1}=compute();
+
+    // FLYING
+    if(simState==='flying'){
+      photonX=Math.min(photonX+4.5,cx);
+      // trail
+      ctx.save();
+      const tg=ctx.createLinearGradient(Math.max(0,photonX-220),cy,photonX,cy);
+      tg.addColorStop(0,'rgba(0,212,255,0)'); tg.addColorStop(1,'rgba(0,212,255,0.5)');
+      ctx.strokeStyle=tg; ctx.lineWidth=3; ctx.shadowColor='#00d4ff'; ctx.shadowBlur=12;
+      ctx.beginPath(); ctx.moveTo(Math.max(0,photonX-220),cy); ctx.lineTo(photonX,cy); ctx.stroke(); ctx.restore();
+      // dashes
+      ctx.save(); ctx.strokeStyle='#00d4ff'; ctx.lineWidth=2.5; ctx.shadowColor='#00d4ff'; ctx.shadowBlur=18;
+      ctx.setLineDash([10,6]); ctx.lineDashOffset=-(simFrame*1.5)%16;
+      ctx.beginPath(); ctx.moveTo(Math.max(0,photonX-130),cy); ctx.lineTo(photonX,cy); ctx.stroke(); ctx.restore();
+      // λ₀ label
+      ctx.save(); ctx.fillStyle='rgba(0,212,255,0.65)'; ctx.font='11px "Space Mono",monospace';
+      ctx.fillText('γ₀  λ₀='+lam0.toFixed(1)+'pm  v=c',Math.max(12,photonX-110),cy-14); ctx.restore();
+      // photon dot
+      ctx.save(); ctx.fillStyle='#00d4ff'; ctx.shadowColor='#00d4ff'; ctx.shadowBlur=24;
+      ctx.beginPath(); ctx.arc(photonX,cy,7,0,Math.PI*2); ctx.fill(); ctx.restore();
+      // velocity vector
+      drawVelocityVector(photonX-55,cy,50,0,'#ffd166','v=c');
+      // electron pulse
+      drawElectron(cx,cy,10*(0.85+0.15*Math.sin(simFrame*0.12)),1);
+      drawAngleArc(cx,cy,th);
+      if(photonX>=cx){
+        simState='collided'; collisionFrame=simFrame;
+        spawnSplash(cx,cy);
+        showBanner();
+        if(wvId)cancelAnimationFrame(wvId);
+        animateWaveform();
+      }
+    }
+
+    // COLLIDED
+    if(simState==='collided'){
+      const cf=simFrame-collisionFrame;
+      updateSplash();
+      scatPhotonX+=scatVX; scatPhotonY+=scatVY;
+      electronX+=electronVX; electronY+=electronVY;
+      electronVX*=0.997; electronVY*=0.997;
+
+      // faded incident ray
+      ctx.save(); ctx.strokeStyle='rgba(0,212,255,0.18)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+      ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(cx,cy); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+
+      // splash
+      drawSplash();
+
+      // shockwave rings
+      if(cf<35){
+        for(let ring=0;ring<3;ring++){
+          const rAge=cf-ring*9;
+          if(rAge>0&&rAge<24){
+            const rr=rAge*6+ring*18, al=Math.max(0,1-rAge/24);
+            ctx.save(); ctx.globalAlpha=al;
+            ctx.strokeStyle='#ffd166'; ctx.lineWidth=2-ring*0.5;
+            ctx.shadowColor='#ffd166'; ctx.shadowBlur=14;
+            ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2); ctx.stroke(); ctx.restore();
+          }
+        }
+      }
+
+      // scattered photon trail
+      const sLen=Math.sqrt((scatPhotonX-cx)**2+(scatPhotonY-cy)**2);
+      if(sLen>2){
+        ctx.save();
+        const sg=ctx.createLinearGradient(cx,cy,scatPhotonX,scatPhotonY);
+        sg.addColorStop(0,'rgba(255,107,53,0.65)'); sg.addColorStop(1,'rgba(255,107,53,0)');
+        ctx.strokeStyle=sg; ctx.lineWidth=3; ctx.shadowColor='#ff6b35'; ctx.shadowBlur=14;
+        ctx.setLineDash([10,6]); ctx.lineDashOffset=-(simFrame*1.2)%16;
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(scatPhotonX,scatPhotonY); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+      }
+      // scattered photon dot
+      ctx.save(); ctx.fillStyle='#ff6b35'; ctx.shadowColor='#ff6b35'; ctx.shadowBlur=22;
+      ctx.beginPath(); ctx.arc(scatPhotonX,scatPhotonY,7,0,Math.PI*2); ctx.fill(); ctx.restore();
+
+      // λ' label on scattered photon
+      ctx.save(); ctx.fillStyle='rgba(255,107,53,0.8)'; ctx.font='11px "Space Mono",monospace';
+      ctx.fillText("γ'  λ'="+lam1.toFixed(1)+'pm  v=c',scatPhotonX+12,scatPhotonY-14); ctx.restore();
+
+      // scattered velocity vector
+      const vLen=50*Math.sqrt(p1/p0);
+      drawVelocityVector(scatPhotonX,scatPhotonY,Math.cos(-th)*vLen,Math.sin(-th)*vLen,'#ffd166','v=c');
+
+      // electron trail
+      const eLen=Math.sqrt((electronX-cx)**2+(electronY-cy)**2);
+      if(eLen>2){
+        ctx.save();
+        const eg=ctx.createLinearGradient(cx,cy,electronX,electronY);
+        eg.addColorStop(0,'rgba(57,255,138,0.45)'); eg.addColorStop(1,'rgba(57,255,138,0)');
+        ctx.strokeStyle=eg; ctx.lineWidth=2; ctx.setLineDash([5,8]);
+        ctx.shadowColor='#39ff8a'; ctx.shadowBlur=10;
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(electronX,electronY); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
+      }
+      drawElectron(electronX,electronY,10,1);
+      // electron velocity
+      const eSp=Math.sqrt(electronVX**2+electronVY**2);
+      if(eSp>0.5){
+        const sc=Math.min(65,eSp*0.65);
+        drawVelocityVector(electronX,electronY,(electronVX/eSp)*sc,(electronVY/eSp)*sc,'#ffd166','v_e');
+      }
+      ctx.save(); ctx.fillStyle='rgba(57,255,138,0.75)'; ctx.font='11px "Space Mono",monospace';
+      ctx.fillText('e⁻  KE='+ke.toFixed(1)+' keV',electronX+14,electronY+20); ctx.restore();
+
+      // collision flash
+      if(cf<14){
+        const fg=ctx.createRadialGradient(cx,cy,0,cx,cy,(14-cf)*9);
+        fg.addColorStop(0,'rgba(255,255,255,'+(0.7*(1-cf/14))+')');
+        fg.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.save(); ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(cx,cy,(14-cf)*9,0,Math.PI*2); ctx.fill(); ctx.restore();
+      }
+      drawAngleArc(cx,cy,th);
+
+      const maxD=Math.max(W,H);
+      if(sLen>maxD*0.85&&eLen>maxD*0.68&&splashParts.length===0){
+        simState='idle'; cancelAnimationFrame(simId); startIdleAnim(); return;
+      }
+    }
+    simId=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ══ CONTROLS ══
+document.getElementById('sl-angle').addEventListener('input',function(){
+  angle=+this.value;
+  document.getElementById('lbl-angle').textContent=angle+'°';
+  document.getElementById('fill-angle').style.width=(angle/180*100)+'%';
+  updateMetrics();
+});
+document.getElementById('sl-energy').addEventListener('input',function(){
+  energy0=+this.value;
+  document.getElementById('lbl-energy').textContent=energy0>=1000?(energy0/1000).toFixed(2)+' MeV':energy0+' keV';
+  document.getElementById('fill-energy').style.width=((energy0-10)/990*100)+'%';
+  updateMetrics();
+});
+document.querySelectorAll('#target-pills .pill').forEach(b=>{
+  b.addEventListener('click',function(){
+    document.querySelectorAll('#target-pills .pill').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active'); targetMass=+this.dataset.mass; updateMetrics();
+  });
+});
+document.getElementById('fire-btn').addEventListener('click',startSim);
+window.addEventListener('resize',()=>{resizeMain();resizeWv();if(simState==='idle'){drawIdle(idleFrame);}});
+
+// ══ INIT ══
+resizeMain(); resizeWv(); updateMetrics(); drawWaveform(0); animateWaveform(); startIdleAnim();
+</script>
+</body>
+</html>
